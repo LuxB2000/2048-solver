@@ -419,6 +419,26 @@ Grid.prototype.neigh4 = function(x,y){
     return neigh;
 }
 
+// return the 8 neighborhood positions
+Grid.prototype.neigh8 = function(x,y){
+    var dir = [0,1, 0,-1, 1,0, -1,0, 1,1, -1,1, 1,-1, -1,-1];
+    var N=8;
+    var d=0,dx,dy;
+    var neigh = [];
+
+    while(d<(N*2)){
+        dx = x + dir[d];
+        dy = y + dir[d+1];
+
+        if( dx >= 0 && dx < 4 && dy >= 0 && dy < 4 ){
+            neigh.push({x:dx,y:dy});
+        }
+        d += 2;
+    }
+
+    return neigh;
+}
+
 // return the 2 neighborhood positions in the order BELOW,LEFT
 Grid.prototype.neigh2 = function(x,y){
     var dir = [0,1,1,0];
@@ -445,10 +465,8 @@ Grid.prototype.map_estimation = function () {
     var self = this;
 
     var grad = function(xi,xj){
-        dx = xi.x - xj.x;
-        dy = xi.y - xj.y;
-        dx = (dx>=0) ? 1 : -1;
-        dy = (dy>=0) ? 1 : -1;
+        var dx = ((xi.x - xj.x)>=0) ? 1 : -1;
+        var dy = ( (xi.y - xj.y)>=0) ? 1 : -1;
         return { dx:dx,dy:dy }
     }
     var GetValue = function(xi){
@@ -457,41 +475,60 @@ Grid.prototype.map_estimation = function () {
             Math.log(self.cellContent(self.indexes[x][y]).value) / Math.log(2) : empty;
     }
     var UnaryPot = function(xi){
-        return GetValue(xi);
+        li = GetValue(xi);
+        if( li == 0){ // empty case -> good, cost 0
+            return li;
+        }else{
+            // we prefer high value labels
+            // we prefer high label close to 0,0
+            return ( (11-li) * (xi.x+1)  );
+        }
+
     }
     var delta = function(li,lj){
         return ((li-lj)==0) ? 0 : 1;
     }
-    var PairwiseCoast = function(xi,xj){
-        li = GetValue(xi);
-        lj = GetValue(xj);
-        gd = grad(xi,xj);
-        beta_h = 10;
-        beta_v = 1 / (4-xi.x);
+    var PairwisePot = function(xi,xj){
+        var li = GetValue(xi);
+        var lj = GetValue(xj);
+        var gd = grad(xi,xj);
+        var beta_v = 10;
+        var beta_h = 1 ; /// (4-xi.y); // we prefer small gradient in the below of the grid
         if(gd.dx == 0){
-            u2 = beta_h * delta(li,lj);
+            u2 = beta_h * Math.abs(li-lj); //delta(li,lj);
         }else{
-            u2 = beta_v * delta(li,lj);
+            u2 = beta_v * Math.abs(li-lj) //delta(li,lj);
         }
         return u2;
 
     }
+    var maxP={x:0,y:0},_max= 0,v=0;
     var U1 = 0, U2 =0;
     for(var x=0; x<4; x++){
         for(var y=0; y<4; y++){
+
             U1 += UnaryPot({x:x,y:y});
 
-            N = self.neigh2(x,y);
+            N = self.neigh4(x,y);
             for(var n=0; n< N.length; n++){
-                U2 += PairwiseCoast({x:x,y:y},N[n])
+                U2 += PairwisePot({x:x,y:y},N[n])
+            }
+
+            v = GetValue({x:x,y:y});
+            if( v > _max ){
+                maxP.x = x;
+                maxP.y = y;
+                _max = v;
             }
         }
     }
 
     //console.log('U1:' , U1, ' U2:', U2);
 
+    // we want the maximal value in 0,0
+    U3 = ( (maxP.x == 0) && (maxP.y == 0) ) ? 0 : 100;
 
-    return (U1 + U2);
+    return (U1 + U2 + U3);
 
 }
 
