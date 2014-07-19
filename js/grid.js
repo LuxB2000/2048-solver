@@ -392,46 +392,108 @@ Grid.prototype.entropy = function() {
     return entropy;
 }
 
+// return the entropy of a single position, 0 if the position is empty
+Grid.prototype.cost = function(x,y){
+    var empty = 0;
+    return this.cellOccupied(this.indexes[x][y]) ?
+        Math.log(this.cellContent(this.indexes[x][y]).value) / Math.log(2) : empty;
+}
+
+// return the 4 neighborhood positions in the order BELOW,TOP,RIGHT,LEFT
+Grid.prototype.neigh4 = function(x,y){
+    var dir = [0,1,0,-1,1,0,-1,0];
+    var N=4;
+    var d=0,dx,dy;
+    var neigh = [];
+
+    while(d<(N*2)){
+        dx = x + dir[d];
+        dy = y + dir[d+1];
+
+        if( dx >= 0 && dx < 4 && dy >= 0 && dy < 4 ){
+            neigh.push({x:dx,y:dy});
+        }
+        d += 2;
+    }
+
+    return neigh;
+}
+
+// return the 2 neighborhood positions in the order BELOW,LEFT
+Grid.prototype.neigh2 = function(x,y){
+    var dir = [0,1,1,0];
+    var N=2;
+    var d=0,dx,dy;
+    var neigh = [];
+
+    while(d<(N*2)){
+        dx = x + dir[d];
+        dy = y + dir[d+1];
+
+        if( dx >= 0 && dx < 4 && dy >= 0 && dy < 4 ){
+            neigh.push({x:dx,y:dy});
+        }
+        d += 2;
+    }
+
+    return neigh;
+}
+
 Grid.prototype.entropy2 = function() {
     var entropy = 0;
     var cells = 0;
+    var Ch = 1.5;
 
-    var emptyValue = 0;
     var deltaHandicap = 0;
 
     for (var y=0; y<4; y++) {
 	for (var x=0; x<4; x++) {
-	    var value = this.cellOccupied(this.indexes[x][y]) ?
-		Math.log(this.cellContent(this.indexes[x][y]).value) / Math.log(2) : emptyValue;
-	    if (this.cellOccupied(this.indexes[x][y])) { cells++; }
+        if (this.cellOccupied(this.indexes[x][y])) { cells++; }
 
+        // local value
+	    var value = this.cost(x,y);
+
+
+        var neigh = this.neigh2(x,y);
+        //console.log('cur: [',x,',',y,'] - neigh:', neigh);
+
+        // Parse the neigh and compute the entropy
+        for(var n=0; n<neigh.length; n++){
+            var nV = this.cost(neigh[n].x, neigh[n].y);
+            if( nV > value){
+                var delta = nV - value + deltaHandicap;
+                entropy += Ch * delta * delta;
+            }
+
+            entropy += 1.25 * Math.abs( nV - value ) * nV;
+        }
+
+        /*
 	    if (x != 3) {
-		var other = this.cellOccupied(this.indexes[x + 1][y]) ?
-		Math.log(this.cellContent(this.indexes[x + 1][y]).value) / Math.log(2) : emptyValue;
+            var rightNeigh = this.cost(x+1,y); // right neighbor value
 
-		if (other > value) {
-		    var delta = other - value + deltaHandicap;
-		    entropy += 1.5 * delta * delta;
-		    //entropy += delta;
-		}
+            if (rightNeigh > value) {
+                var delta = rightNeigh - value + deltaHandicap;
+                entropy += Ch * delta * delta;
+                //entropy += delta;
+            }
 
-		entropy += 0.5 * Math.abs(other - value) * other;
+            entropy += 0.5 * Math.abs(rightNeigh - value) * rightNeigh;
 	    }
 
 	    if (y != 3) {
-		var other = this.cellOccupied(this.indexes[x][y + 1]) ?
-		    Math.log(this.cellContent(this.indexes[x][y + 1]).value) / Math.log(2) : emptyValue;
+            var belowNeigh = this.cost(x,y+1); // below neighbor value
 
-		if (other > value) {
-		    var delta = other - value + deltaHandicap;
-		    entropy += delta * delta;
-		    //entropy += delta;
-		}
+            if (belowNeigh > value) {
+                var delta = belowNeigh - value + deltaHandicap;
+                entropy += delta * delta;
+                //entropy += delta;
+            }
 
-		entropy += 1.25 * Math.abs(other - value) * other;
+		    entropy += 1.25 * Math.abs(belowNeigh - value) * belowNeigh;
 	    }
-	}
-    }
+	    */
+	}}
 
     entropy += cells * cells * cells;
     return entropy;
