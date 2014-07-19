@@ -7,7 +7,8 @@ AI.prototype.search = function(grid, level) {
     //console.log('Iteration level ', level);
 
     if (level == 2) {
-	var value = grid.entropy2();
+	var value = grid.map_energy();
+    //var value = grid.entropy2();
 	//console.log('Leave value: ', value);	
 	return { move: -1, score: value };
     }
@@ -20,13 +21,13 @@ AI.prototype.search = function(grid, level) {
 	    //console.log('direction ', direction);
 	    var newGrid = grid.clone();
 	    if (newGrid.move(direction).moved) {
-		var result = this.search(newGrid, level + 1);
-		//console.log('score ', result.score);
+            var result = this.search(newGrid, level + 1);
+            //console.log('score ', result.score);
 
-		if (result.score < bestScore) {
-		    bestScore = result.score;
-		    bestMove = direction;
-		}
+            if (result.score < bestScore) {
+                bestScore = result.score;
+                bestMove = direction;
+            }
 	    }
 	}
     }
@@ -57,7 +58,8 @@ AI.prototype.getBest2 = function() {
 		    return { move: direction };
 		}
 
-		var score = newGrid.entropy2();
+		var score = newGrid.map_energy();
+        //var score = newGrid.entropy2();
 		//console.log('score ', score);
 
 		if (score < bestScore) {

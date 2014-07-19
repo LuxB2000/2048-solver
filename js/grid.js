@@ -439,6 +439,69 @@ Grid.prototype.neigh2 = function(x,y){
     return neigh;
 }
 
+
+Grid.prototype.map_estimation = function () {
+    var empty = 0;
+    var self = this;
+
+    var grad = function(xi,xj){
+        dx = xi.x - xj.x;
+        dy = xi.y - xj.y;
+        dx = (dx>=0) ? 1 : -1;
+        dy = (dy>=0) ? 1 : -1;
+        return { dx:dx,dy:dy }
+    }
+    var GetValue = function(xi){
+        var x=xi.x; var y=xi.y;
+        return self.cellOccupied(self.indexes[x][y]) ?
+            Math.log(self.cellContent(self.indexes[x][y]).value) / Math.log(2) : empty;
+    }
+    var UnaryPot = function(xi){
+        return GetValue(xi);
+    }
+    var delta = function(li,lj){
+        return ((li-lj)==0) ? 0 : 1;
+    }
+    var PairwiseCoast = function(xi,xj){
+        li = GetValue(xi);
+        lj = GetValue(xj);
+        gd = grad(xi,xj);
+        beta_h = 10;
+        beta_v = 1 / (4-xi.x);
+        if(gd.dx == 0){
+            u2 = beta_h * delta(li,lj);
+        }else{
+            u2 = beta_v * delta(li,lj);
+        }
+        return u2;
+
+    }
+    var U1 = 0, U2 =0;
+    for(var x=0; x<4; x++){
+        for(var y=0; y<4; y++){
+            U1 += UnaryPot({x:x,y:y});
+
+            N = self.neigh2(x,y);
+            for(var n=0; n< N.length; n++){
+                U2 += PairwiseCoast({x:x,y:y},N[n])
+            }
+        }
+    }
+
+    //console.log('U1:' , U1, ' U2:', U2);
+
+
+    return (U1 + U2);
+
+}
+
+Grid.prototype.map_energy = function() {
+    //var eps = 0.0000001;
+    //e = Math.exp( - this.map_estimation() + eps);
+    //console.log('E:', e);
+    return  this.map_estimation();
+}
+
 Grid.prototype.entropy2 = function() {
     var entropy = 0;
     var cells = 0;
