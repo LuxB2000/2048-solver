@@ -1,0 +1,3 @@
+This is a simple 2048 AI solver.
+Most of the current files come from http://ov3y.github.io/2048-AI/
+Most of the changes are done in the AI algorithm.
